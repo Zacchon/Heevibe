@@ -14,6 +14,15 @@ export class BeeSimulator {
         this.nectarCollected = 0;
         this.lastTime = 0;
         this.statsCallback = null;
+        
+        // Configurable parameters
+        this.nectarRegenRate = 0.1;
+        this.beeSpeedMultiplier = 1.25;
+        this.maxNectarPerFlower = 12.5;
+        this.danceDuration = 2000;
+        this.detectionRange = 100;
+        this.energyDecayRate = 0.1;
+        
         this.initializeSimulation();
     }
 
@@ -33,7 +42,7 @@ export class BeeSimulator {
         const distance = 20 + Math.random() * 30;
         const x = this.hive.position.x + Math.cos(angle) * distance;
         const y = this.hive.position.y + Math.sin(angle) * distance;
-        this.bees.push(new Bee(x, y, this.hive));
+        this.bees.push(new Bee(x, y, this.hive, this));
     }
 
     addFlower(x = null, y = null) {
@@ -41,7 +50,7 @@ export class BeeSimulator {
             x = 100 + Math.random() * (this.canvas.width - 200);
             y = 100 + Math.random() * (this.canvas.height - 200);
         }
-        this.flowers.push(new Flower(x, y));
+        this.flowers.push(new Flower(x, y, this));
     }
 
     setStatsCallback(cb) {
@@ -54,6 +63,32 @@ export class BeeSimulator {
 
     setRunning(isRunning) {
         this.isRunning = isRunning;
+    }
+
+    setNectarRegenRate(rate) {
+        this.nectarRegenRate = rate;
+        this.flowers.forEach(flower => flower.regenRate = rate);
+    }
+
+    setBeeSpeedMultiplier(multiplier) {
+        this.beeSpeedMultiplier = multiplier;
+        this.bees.forEach(bee => bee.updateSpeedMultiplier(multiplier));
+    }
+
+    setMaxNectarPerFlower(maxNectar) {
+        this.maxNectarPerFlower = maxNectar;
+    }
+
+    setDanceDuration(duration) {
+        this.danceDuration = duration;
+    }
+
+    setDetectionRange(range) {
+        this.detectionRange = range;
+    }
+
+    setEnergyDecayRate(rate) {
+        this.energyDecayRate = rate;
     }
 
     reset() {
@@ -72,6 +107,10 @@ export class BeeSimulator {
         this.flowers.forEach(flower => {
             flower.update(adjustedDeltaTime);
         });
+        
+        // Remove depleted flowers
+        this.flowers = this.flowers.filter(flower => flower.nectar > 0.1);
+        
         if (this.statsCallback) this.statsCallback(this.getStats());
     }
 

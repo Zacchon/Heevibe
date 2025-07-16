@@ -1,11 +1,12 @@
 import { Vector2 } from './Vector2.js';
 
 export class Flower {
-    constructor(x, y) {
+    constructor(x, y, simulator) {
         this.position = new Vector2(x, y);
-        this.nectar = 5 + Math.random() * 10;
+        this.simulator = simulator;
+        this.nectar = 5 + Math.random() * (simulator ? simulator.maxNectarPerFlower - 5 : 10);
         this.maxNectar = this.nectar;
-        this.regenRate = 0.1;
+        this.regenRate = simulator ? simulator.nectarRegenRate : 0.1;
         this.color = this.getColorForNectar();
         this.size = 8 + Math.random() * 4;
         this.petalCount = 5 + Math.floor(Math.random() * 3);
@@ -19,8 +20,17 @@ export class Flower {
         return `rgb(${r}, ${g}, ${b})`;
     }
 
+    getCenterColorForNectar() {
+        const intensity = this.nectar / this.maxNectar;
+        // Bright orange when full, fading to dark brown when depleted
+        const r = Math.floor(255 * intensity + 139 * (1 - intensity)); // 255 -> 139
+        const g = Math.floor(165 * intensity + 69 * (1 - intensity));  // 165 -> 69
+        const b = Math.floor(0 * intensity + 19 * (1 - intensity));    // 0 -> 19
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
     update(deltaTime) {
-        if (this.nectar < this.maxNectar) {
+        if (this.nectar > 0 && this.nectar < this.maxNectar) {
             this.nectar = Math.min(this.maxNectar, this.nectar + this.regenRate * deltaTime);
         }
         this.color = this.getColorForNectar();
@@ -51,7 +61,7 @@ export class Flower {
         }
 
         // Center
-        ctx.fillStyle = '#FFA500';
+        ctx.fillStyle = this.getCenterColorForNectar();
         ctx.beginPath();
         ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2);
         ctx.fill();

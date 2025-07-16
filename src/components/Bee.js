@@ -1,15 +1,17 @@
 import { Vector2 } from './Vector2.js';
 
 export class Bee {
-    constructor(x, y, hive) {
+    constructor(x, y, hive, simulator) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, 0);
         this.hive = hive;
+        this.simulator = simulator;
         this.state = 'exploring'; // 'exploring', 'foraging', 'returning', 'dancing'
         this.target = null;
         this.nectar = 0;
         this.maxNectar = 3;
-        this.speed = 1 + Math.random() * 0.5;
+        this.baseSpeed = 1 + Math.random() * 0.5;
+        this.speed = this.baseSpeed * (simulator ? simulator.beeSpeedMultiplier : 1.25);
         this.energy = 100;
         this.danceTimer = 0;
         this.flowerMemory = null;
@@ -27,6 +29,10 @@ export class Bee {
             case 'dancing': return '#FF1493';
             default: return '#FFD700';
         }
+    }
+
+    updateSpeedMultiplier(multiplier) {
+        this.speed = this.baseSpeed * multiplier;
     }
 
     update(deltaTime, flowers, simulator, canvas) {
@@ -49,13 +55,15 @@ export class Bee {
         }
 
         this.move(deltaTime, canvas);
-        this.energy = Math.max(0, this.energy - deltaTime * 0.1);
+        const energyDecay = this.simulator ? this.simulator.energyDecayRate : 0.1;
+        this.energy = Math.max(0, this.energy - deltaTime * energyDecay);
     }
 
     explore(flowers, canvas) {
         // Look for flowers
+        const detectionRange = this.simulator ? this.simulator.detectionRange : 100;
         const nearbyFlowers = flowers.filter(f =>
-            f.nectar > 0 && this.position.distance(f.position) < 100
+            f.nectar > 0.1 && this.position.distance(f.position) < detectionRange
         );
 
         if (nearbyFlowers.length > 0) {
@@ -82,7 +90,7 @@ export class Bee {
     }
 
     forage(flowers, simulator) {
-        if (!this.target || this.target.nectar <= 0) {
+        if (!this.target || this.target.nectar <= 0.1 || !flowers.includes(this.target)) {
             this.state = 'exploring';
             this.target = null;
             return;
@@ -119,7 +127,7 @@ export class Bee {
             this.nectar = 0;
             if (this.flowerMemory && this.flowerMemory.quality > 2) {
                 this.state = 'dancing';
-                this.danceTimer = 2000; // Dance for 2 seconds
+                this.danceTimer = this.simulator ? this.simulator.danceDuration : 2000;
             } else {
                 this.state = 'exploring';
             }
